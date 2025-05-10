@@ -5,43 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Semak Data</title>
     <script>
-        function pilihX() {
-            google.script.run.withSuccessHandler(paparNotasiA1).paparPilihX();
-        }
-
-        function pilihY() {
-            google.script.run.withSuccessHandler(paparNotasiA1).paparPilihY();
+        function pilih(x) {
+            google.script.run.withSuccessHandler(paparNotasiA1).paparPilih(x);
         }
 
         function paparNotasiA1(dataDariGS) {
             document.getElementById(dataDariGS[1]).value = dataDariGS[0];
         }
 
-        function semakVarians() {
+        function semakData() {
             let kawasanX = document.getElementById('kawasanX').value;
             let kawasanY = document.getElementById('kawasanY').value;
             let data = [kawasanX, kawasanY];
-            google.script.run.withSuccessHandler(paparKesimpulan).semakVarians(data);
+            google.script.run.withSuccessHandler(paparKesimpulan).semakDataGS(data);
         }
 
         function paparKesimpulan(dataDariGS) {
-            document.getElementById('kesimpulanF').innerHTML = `${dataDariGS[0]}</br>p = ${dataDariGS[1]}`;
+            document.getElementById('kesimpulanF').innerHTML = `
+                    ${dataDariGS[2]}</br></br>${dataDariGS[0]}</br>p = ${dataDariGS[1]}`;
         }
 
     </script>
 </head>
 <body>
-    <h1>Semak Varians</h1>
+    <h1>Semak Data</h1>
     <div>
-        <button type="button" onclick="pilihX()">Data X >>> </button>
+        <button type="button" onclick="pilih('x')">Data X >>> </button>
         <input type="text" id="kawasanX" value="" disabled>
     </div>
     <div>
-        <button type="button" onclick="pilihY()">Data Y >>> </button>
+        <button type="button" onclick="pilih('y')">Data Y >>> </button>
         <input type="text" id="kawasanY" value="" disabled>
     </div>
     <div>
-        <button type="button" onclick="semakVarians()">Semak Varians</button>
+        <button type="button" onclick="semakData()">Semak Data</button>
         <p id="kesimpulanF"></p>
     </div>
 </body>
