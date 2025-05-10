@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semak Data</title>
+    <script>
+        function pilihX() {
+            google.script.run.withSuccessHandler(paparNotasiA1).paparPilihX();
+        }
+
+        function pilihY() {
+            google.script.run.withSuccessHandler(paparNotasiA1).paparPilihY();
+        }
+
+        function paparNotasiA1(dataDariGS) {
+            document.getElementById(dataDariGS[1]).value = dataDariGS[0];
+        }
+
+        function semakVarians() {
+            let kawasanX = document.getElementById('kawasanX').value;
+            let kawasanY = document.getElementById('kawasanY').value;
+            let data = [kawasanX, kawasanY];
+            google.script.run.withSuccessHandler(paparKesimpulan).semakVarians(data);
+        }
+
+        function paparKesimpulan(dataDariGS) {
+            document.getElementById('kesimpulanF').innerHTML = `${dataDariGS[0]}</br>p = ${dataDariGS[1]}`;
+        }
+
+    </script>
+</head>
+<body>
+    <h1>Semak Varians</h1>
+    <div>
+        <button type="button" onclick="pilihX()">Data X >>> </button>
+        <input type="text" id="kawasanX" value="" disabled>
+    </div>
+    <div>
+        <button type="button" onclick="pilihY()">Data Y >>> </button>
+        <input type="text" id="kawasanY" value="" disabled>
+    </div>
+    <div>
+        <button type="button" onclick="semakVarians()">Semak Varians</button>
+        <p id="kesimpulanF"></p>
+    </div>
+</body>
+</html>
