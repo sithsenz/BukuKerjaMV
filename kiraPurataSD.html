@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Semak Data</title>
+    <title>Kira Purata SD</title>
     <script>
         function pilih(x) {
             google.script.run.withSuccessHandler(paparNotasiA1).paparPilih(x);
@@ -13,22 +13,30 @@
             document.getElementById(dataDariGS[1]).value = dataDariGS[0];
         }
 
-        function semakData() {
+        function kiraPurataSD() {
             let kawasanX = document.getElementById('kawasanX').value;
             let kawasanY = document.getElementById('kawasanY').value;
-            let data = [kawasanX, kawasanY];
-            google.script.run.withSuccessHandler(paparKesimpulan).semakDataGS(data);
+
+            if (kawasanY == "") {
+                document.getElementById('mesej').innerHTML = "Data Y tidak boleh dibiarkan kosong";
+                return;
+            }
+
+            document.getElementById('mesej').innerHTML = "";
+
+            let kawasan = [kawasanX, kawasanY];
+            google.script.run.kiraPurataSDgs(kawasan);
         }
 
-        function paparKesimpulan(dataDariGS) {
-            document.getElementById('kesimpulanF').innerHTML = `
-                    ${dataDariGS[2]}</br></br>${dataDariGS[0]}</br>p = ${dataDariGS[1]}`;
+        function kosongkan() {
+            document.getElementById('kawasanX').value = "";
+            document.getElementById('kawasanY').value = "";
+            document.getElementById('mesej').innerHTML = "";
         }
-
     </script>
 </head>
 <body>
-    <h1>Semak Data</h1>
+    <h1>Pilih Data</h1>
     <div>
         <button type="button" onclick="pilih('x')">Data X >>> </button>
         <input type="text" id="kawasanX" value="" disabled>
@@ -38,8 +46,9 @@
         <input type="text" id="kawasanY" value="" disabled>
     </div>
     <div>
-        <button type="button" onclick="semakData()">Semak Data</button>
-        <p id="kesimpulanF"></p>
+        <button type="button" onclick="kosongkan()">Reset</button>
+        <button type="button" onclick="kiraPurataSD()">Kira</button>
+        <p id="mesej"></p>
     </div>
 </body>
 </html>

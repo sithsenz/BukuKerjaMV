@@ -2,7 +2,8 @@
 1. Pemalar
 ========*/
 const UI = SpreadsheetApp.getUi();
-const lembaran = SpreadsheetApp.getActiveSheet();
+const lembaran = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Utama');
+const bukuKerja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('BukuKerja');
 
 
 /*=============
@@ -10,16 +11,9 @@ const lembaran = SpreadsheetApp.getActiveSheet();
 =============*/
 function onOpen() {
   UI.createMenu('Verifikasi')
-    .addItem('Semak Data', 'paparSemakData')
-
-    .addSubMenu(
-      UI.createMenu('Perbandingan Kaedah')
-        .addItem('OLS', 'bandingOLS')
-        .addItem('Deming', 'bandingODeming')
-    )
-
+    .addItem('Kira Purata SD', 'paparKiraPurataSD')
+    .addItem('Perbandingan Kaedah', 'paparBandingan')
     .addItem('Linearity', 'semakLinearity')
-
     .addToUi();
 }
 
@@ -27,63 +21,123 @@ function onOpen() {
 /*==================
 3. Fungsi Menu Utama
 ==================*/
-function paparSemakData() {
-  let menuTepi = HtmlService.createHtmlOutputFromFile('semakData');
-  menuTepi.setTitle('Semak Data');
+function paparKiraPurataSD() {
+  let menuTepi = HtmlService.createHtmlOutputFromFile('kiraPurataSD');
+  menuTepi.setTitle('Kira Purata dan SD Data');
+  UI.showSidebar(menuTepi);
+}
+
+function paparBandingan() {
+  let menuTepi = HtmlService.createHtmlOutputFromFile('bandingan');
+  menuTepi.setTitle('Perbandingan Kaedah');
   UI.showSidebar(menuTepi);
 }
 
 
-/*==========================
-4. Fungsi Bantuan Semak Data
-==========================*/
-function paparPilih(x) {
-  let kawasanTerpilih = x == 'x'? 'kawasanX' : 'kawasanY';
-  let kawasan = lembaran.getActiveRange().getA1Notation();
+/*==============================
+4. Fungsi Bantuan Kira Purata SD
+==============================*/
+function kiraPurataSDgs(kawasan) {
+  let dataY = lembaran.getRange(kawasan[1]).getValues();
+  let bilSampel = dataY.length;
 
-  return [kawasan, kawasanTerpilih];
+  if (kawasan[0] != "") {
+    let dataX = lembaran.getRange(kawasan[0]).getValues();
+
+    for (let i=0; i<bilSampel; i++) {
+      setPurataSD(lembaran, i, 8, dataX);
+    }
+  }
+
+  for (let i=0; i<bilSampel; i++) {
+    setPurataSD(lembaran, i, 10, dataY);
+  }
+
+  let kawasanPurataSD = lembaran.getRange(2,8,bilSampel,4);
+  kawasanPurataSD.setValues(kawasanPurataSD.getValues());
+  kawasanPurataSD.setNumberFormat('0.0000');
 }
 
-function semakDataGS(data) {
-  let selA1 = lembaran.getRange('A1');
-  const dataAsalA1 = selA1.getDisplayValue();
 
-  let selB1 = lembaran.getRange('B1');
-  const dataAsalB1 = selB1.getDisplayValue();
+/*===========================
+5. Fungsi Perbandingan Kaedah
+===========================*/
+function kiraWLSRgs(kawasan) {
+  let dataX = lembaran.getRange(`Utama!${kawasan[0]}`).getValues();
+  let dataY = lembaran.getRange(`Utama!${kawasan[1]}`).getValues();
+  let dataSDy = lembaran.getRange(`Utama!${kawasan[2]}`).getValues();
+  let bilSampel = dataX.length;
 
-  let selC1 = lembaran.getRange('C1');
-  const dataAsalC1 = selC1.getDisplayValue();
+  let dataBeratY = [];
+  let dataBeratX = [];
+  let dataPintasan = [];
 
-  selA1.setFormula(`=FTEST(${data[0]},${data[1]})`).setNumberFormat('0.0000');
+  for (let i=0; i<bilSampel; i++) {
+    let pemberat = dataSDy[i][0];
+    dataBeratY.push([dataY[i][0] / pemberat]);
+    dataBeratX.push([dataX[i][0] / pemberat]);
+    dataPintasan.push([1 / pemberat]);
+  }
 
-  let pFvarians = selA1.getDisplayValue();
-  let kesimpulanFvarians = pFvarians < 0.05? 'Varians berubah-ubah' : 'Varians seragam';
+  bukuKerja.getRange(1,1,bilSampel,1).setValues(dataBeratY);
+  bukuKerja.getRange(1,2,bilSampel,1).setValues(dataBeratX);
+  bukuKerja.getRange(1,3,bilSampel,1).setValues(dataPintasan);
 
-  selB1.setFormula(`=QUARTILE(${data[1]},1)`);
-  selC1.setFormula(`=QUARTILE(${data[1]},3)`);
+  let kawasanY = bukuKerja.getRange(1,1,bilSampel,1).getA1Notation();
+  let kawasanXsdY = bukuKerja.getRange(1,2,bilSampel,2).getA1Notation();
+  bukuKerja.getRange('E1').setFormula(`=LINEST(${kawasanY},${kawasanXsdY},FALSE,TRUE)`);
 
-  let julatKuartil = selC1.getValue() - selB1.getValue();
-  let hadBawah = selB1.getValue() - 1.5 * julatKuartil;
-  let hadAtas = selC1.getValue() + 1.5 * julatKuartil;
+  let dataCoef = bukuKerja.getRange('E1').getDataRegion().getValues();
 
-  selB1.setValue(hadBawah).setNumberFormat('0.0000');
-  selC1.setValue(hadAtas).setNumberFormat('0.0000');
-  let kesimpulanNormal = `${selB1.getDisplayValue()} <= y <= ${selC1.getDisplayValue()}`;
+  bukuKerja.getRange('E8').setFormula(`=TINV(0.05,F4)`);
+  let nilaiStudentT = bukuKerja.getRange('E8').getValue();
+  let SEMbeta0 = nilaiStudentT * dataCoef[1][0];
+  let SEMbeta1 = nilaiStudentT * dataCoef[1][1];
 
-  const julatDiformat = lembaran.getRange(data[1]);
-  const formatBersyarat = SpreadsheetApp.newConditionalFormatRule()
-                          .whenNumberNotBetween(hadBawah, hadAtas)
-                          .setBackground('#FF0000')
-                          .setRanges([julatDiformat])
-                          .build();
+  bukuKerja.getRange('E10').setValue(dataCoef[0][0] - SEMbeta0);
+  bukuKerja.getRange('F10').setValue(dataCoef[0][0]);
+  bukuKerja.getRange('G10').setValue(dataCoef[0][0] + SEMbeta0);
+  bukuKerja.getRange('E11').setValue(dataCoef[0][1] - SEMbeta1);
+  bukuKerja.getRange('F11').setValue(dataCoef[0][1]);
+  bukuKerja.getRange('G11').setValue(dataCoef[0][1] + SEMbeta1);
+  bukuKerja.getRange('E10').getDataRegion().setNumberFormat('0.0000')
 
-  const peraturanFormatBersyarat = [];
-  peraturanFormatBersyarat.push(formatBersyarat);
-  lembaran.setConditionalFormatRules(peraturanFormatBersyarat);
+  bukuKerja.getRange('E13').setValue(dataCoef[2][0]).setNumberFormat('0.00%');
 
-  selA1.setValue(dataAsalA1);
-  selB1.setValue(dataAsalB1);
-  selC1.setValue(dataAsalC1);
+  let beta0 = bukuKerja.getRange('F10').getDisplayValue();
+  let beta0bawah = bukuKerja.getRange('E10').getDisplayValue();
+  let beta0atas = bukuKerja.getRange('G10').getDisplayValue();
 
-  return [kesimpulanFvarians, pFvarians, kesimpulanNormal];
+  let beta1 = bukuKerja.getRange('F11').getDisplayValue();
+  let beta1bawah = bukuKerja.getRange('E11').getDisplayValue();
+  let beta1atas = bukuKerja.getRange('G11').getDisplayValue();
+
+  let rKuasa2 = `R2 = ${bukuKerja.getRange('E13').getDisplayValue()}`;
+
+  let persamaan = `Y = (${beta0}) + (${beta1})X`;
+  let kecerunan = `Kecerunan = (${beta1bawah} , ${beta1atas})`;
+  let pintasan = `Pintasan = (${beta0bawah} , ${beta0atas})`;
+
+  return [persamaan, kecerunan, pintasan, rKuasa2];
+}
+
+
+/*====================
+6. Fungsi Bantuan Umum
+====================*/
+function paparPilih(x) {
+  let kawasanTerpilih = {
+    'x': 'kawasanX',
+    'sdx': 'kawasanSDx',
+    'y': 'kawasanY',
+    'sdy': 'kawasanSDy',
+  }
+  let kawasan = lembaran.getActiveRange().getA1Notation();
+
+  return [kawasan, kawasanTerpilih[x]];
+}
+
+function setPurataSD(lembar, baris, lajurPurata, data) {
+  lembar.getRange(2+baris, lajurPurata).setFormula(`=AVERAGE(${data[baris]})`);
+  lembar.getRange(2+baris, lajurPurata+1).setFormula(`=IFERROR(STDEV(${data[baris]}), "")`);
 }

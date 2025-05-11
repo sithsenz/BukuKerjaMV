@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WLS-Regression</title>
+    <script>
+        function pilih(x) {
+            google.script.run.withSuccessHandler(paparNotasiA1).paparPilih(x);
+        }
+
+        function paparNotasiA1(dataDariGS) {
+            document.getElementById(dataDariGS[1]).value = dataDariGS[0];
+        }
+
+        function kiraWLSR() {
+            let kawasanX = document.getElementById('kawasanX').value;
+            let kawasanY = document.getElementById('kawasanY').value;
+            let kawasanSDy = document.getElementById('kawasanSDy').value;
+
+            let mesej = 'Semua ruangan perlu diisi kecuali ruangan Data SD X boleh dibiarkan kosong.'
+
+            if (kawasanX == '' || kawasanY == '' || kawasanSDy == '') {
+                document.getElementById('mesej').innerHTML = mesej;
+                return;
+            }
+
+            document.getElementById('mesej').innerHTML = '';
+
+            let kawasan = [kawasanX, kawasanY, kawasanSDy];
+            google.script.run.withSuccessHandler(paparKesimpulan).kiraWLSRgs(kawasan);
+        }
+
+        function paparKesimpulan(dataDariGS) {
+            document.getElementById('mesej').innerHTML = dataDariGS.join(' </br> ');
+        }
+
+        function kosongkan() {
+            document.getElementById('kawasanX').value = "";
+            document.getElementById('kawasanY').value = "";
+            document.getElementById('kawasanSDx').value = "";
+            document.getElementById('kawasanSDy').value = "";
+            document.getElementById('mesej').innerHTML = "";
+        }
+    </script>
+</head>
+<body>
+    <h1>Pilih Data</h1>
+    <div>
+        <button type="button" onclick="pilih('x')">Data X >>> </button>
+        <input type="text" id="kawasanX" value="" disabled>
+    </div>
+    <div>
+        <button type="button" onclick="pilih('sdx')">Data SD X >>> </button>
+        <input type="text" id="kawasanSDx" value="" disabled>
+    </div>
+    <div>
+        <button type="button" onclick="pilih('y')">Data Y >>> </button>
+        <input type="text" id="kawasanY" value="" disabled>
+    </div>
+    <div>
+        <button type="button" onclick="pilih('sdy')">Data SD Y >>> </button>
+        <input type="text" id="kawasanSDy" value="" disabled>
+    </div>
+    <div>
+        <button type="button" onclick="kosongkan()">Reset</button>
+        <button type="button" onclick="kiraWLSR()">WLS-Regression</button>
+        <p id="mesej"></p>
+    </div>
+
+</body>
+</html>
