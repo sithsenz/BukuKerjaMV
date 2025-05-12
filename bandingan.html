@@ -31,6 +31,23 @@
             google.script.run.withSuccessHandler(paparKesimpulan).kiraWLSRgs(kawasan);
         }
 
+        function kiraDemingR() {
+            let kawasanX = document.getElementById('kawasanX').value;
+            let kawasanY = document.getElementById('kawasanY').value;
+
+            let mesej = 'Analisis Regresi Deming memerlukan maklumat Data X dan Data Y.'
+
+            if (kawasanX == '' || kawasanY == '') {
+                document.getElementById('mesej').innerHTML = mesej;
+                return;
+            }
+
+            document.getElementById('mesej').innerHTML = '';
+            
+            let kawasan = [kawasanX, kawasanY];
+            google.script.run.withSuccessHandler(paparKesimpulan).wDemingR(kawasan);
+        }
+
         function paparKesimpulan(dataDariGS) {
             document.getElementById('mesej').innerHTML = dataDariGS.join(' </br> ');
         }
@@ -64,9 +81,14 @@
     </div>
     <div>
         <button type="button" onclick="kosongkan()">Reset</button>
-        <button type="button" onclick="kiraWLSR()">WLS-Regression</button>
+        <button type="button" onclick="kiraWLSR()">Regresi WLS</button>
+        <button type="button" onclick="kiraDemingR()">Regresi W-Deming</button>
         <p id="mesej"></p>
-    </div>
+        <p>
 
+<img src="data:image/png;base64,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" />
+
+ SithSenz</p>
+    </div>
 </body>
 </html>

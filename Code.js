@@ -59,9 +59,9 @@ function kiraPurataSDgs(kawasan) {
 }
 
 
-/*===========================
-5. Fungsi Perbandingan Kaedah
-===========================*/
+/*============================================
+5. Fungsi Perbandingan Kaedah - WLS Regression
+============================================*/
 function kiraWLSRgs(kawasan) {
   let dataX = lembaran.getRange(`Utama!${kawasan[0]}`).getValues();
   let dataY = lembaran.getRange(`Utama!${kawasan[1]}`).getValues();
@@ -115,15 +115,175 @@ function kiraWLSRgs(kawasan) {
   let rKuasa2 = `R2 = ${bukuKerja.getRange('E13').getDisplayValue()}`;
 
   let persamaan = `Y = (${beta0}) + (${beta1})X`;
-  let kecerunan = `Kecerunan = (${beta1bawah} , ${beta1atas})`;
-  let pintasan = `Pintasan = (${beta0bawah} , ${beta0atas})`;
+  let kecerunan = `Kecerunan = [${beta1bawah} , ${beta1atas}]`;
+  let pintasan = `Pintasan = [${beta0bawah} , ${beta0atas}]`;
 
   return [persamaan, kecerunan, pintasan, rKuasa2];
 }
 
 
+/*=====================================================
+Fungsi Perbandingan Kaedah - Weighted Deming Regression
+=====================================================*/
+function wDemingR(kawasan) {
+  const purata_x = [];
+  const purata_y = [];
+  const sd_x = [];
+  const sd_y = [];
+  const lam = [];
+
+  let dataX = lembaran.getRange(`Utama!${kawasan[0]}`).getValues();
+  let dataY = lembaran.getRange(`Utama!${kawasan[1]}`).getValues();
+  let bilSampel = dataX.length;
+
+  dataX.forEach(baris => {purata_x.push(bantuKiraPurata(baris))});
+  dataY.forEach(baris => {purata_y.push(bantuKiraPurata(baris))});
+
+  dataX.forEach(baris => {sd_x.push(bantuKiraSDSampel(baris))});
+  dataY.forEach(baris => {sd_y.push(bantuKiraSDSampel(baris))});
+
+  for (let i=0; i<bilSampel; i++) {
+    lam.push((sd_x[i]**2) / (sd_y[i]**2));
+  }
+
+  let beta1 = 1.0;
+  let beta0 = 0.0;
+  let kejituan = 0.00001;
+  let bilMaxPercubaan = 100;
+  let bilPercubaan = 0;
+  let tercapai = false;
+  let pemberat = [];
+
+  while (!tercapai && bilPercubaan < bilMaxPercubaan) {
+    pemberat = purata_x.map((_, i) => {
+      let berat = sd_x[i]**2 + (beta1 * sd_y[i])**2;
+      return 1 / berat;
+    });
+
+    const stats = bantuKiraWLS(purata_x, purata_y, pemberat);
+    const beta1Baru = stats.kecerunan;
+    const beta0Baru = stats.pintasan;
+
+    if (Math.abs(beta1Baru - beta1) < kejituan) {
+      tercapai = true;
+    }
+
+    beta1 = beta1Baru;
+    beta0 = beta0Baru;
+    bilPercubaan++;
+  }
+
+  const {r2, sse} = bantuKiraR2(purata_x, purata_y, pemberat, beta1, beta0);
+  const selangKeyakinan = bantuKiraCI(purata_x, purata_y, pemberat, beta1, beta0, bilSampel, sse);
+
+  bukuKerja.getRange('E10').setValue(selangKeyakinan.cerunBawah);
+  bukuKerja.getRange('F10').setValue(beta1);
+  bukuKerja.getRange('G10').setValue(selangKeyakinan.cerunAtas);
+  bukuKerja.getRange('E11').setValue(selangKeyakinan.pintasBawah);
+  bukuKerja.getRange('F11').setValue(beta0);
+  bukuKerja.getRange('G11').setValue(selangKeyakinan.pintasAtas);
+  bukuKerja.getRange('E10').getDataRegion().setNumberFormat('0.0000')
+
+  bukuKerja.getRange('E13').setValue(r2).setNumberFormat('0.00%');
+
+  let pintas = bukuKerja.getRange('F11').getDisplayValue();
+  let beta0bawah = bukuKerja.getRange('E11').getDisplayValue();
+  let beta0atas = bukuKerja.getRange('G11').getDisplayValue();
+
+  let cerun = bukuKerja.getRange('F10').getDisplayValue();
+  let beta1bawah = bukuKerja.getRange('E10').getDisplayValue();
+  let beta1atas = bukuKerja.getRange('G10').getDisplayValue();
+
+  let rKuasa2 = `R2 = ${bukuKerja.getRange('E13').getDisplayValue()}`;
+
+  let persamaan = `Y = (${pintas}) + (${cerun})X`;
+  let kecerunan = `Kecerunan = [${beta1bawah} , ${beta1atas}]`;
+  let pintasan = `Pintasan = [${beta0bawah} , ${beta0atas}]`;
+
+  return [persamaan, kecerunan, pintasan, rKuasa2];
+}
+
+function bantuKiraR2(x, y, berat, cerun, pintas) {
+  let sse = 0;
+  let sst = 0;
+
+  const purataBeratY = bantuKiraPurata(y.map((yi, i) => berat[i] * yi)) / bantuKiraPurata(berat);
+
+  for (let i=0; i<x.length; i++) {
+    const b = berat[i];
+    const bakiResidu = y[i] - (pintas + cerun * x[i]);
+    sse += b * bakiResidu**2;
+    sst += b * (y[i] - purataBeratY)**2
+  }
+
+  const r2 = 1 - (sse / sst);
+  return {r2, sse};
+}
+
+function bantuKiraCI(x, y, berat, cerun, pintas, bil, sse) {
+  let jumBerat = 0;
+  let jumBeratX = 0;
+  let jumBeratX2 = 0;
+
+  for (let i=0; i<bil; i++) {
+    const b = berat[i];
+    jumBerat += b;
+    jumBeratX += b * x[i];
+    jumBeratX2 += b * x[i]**2;
+  }
+
+  const mse = sse / (bil - 2);
+  const seCerun = Math.sqrt(mse / (jumBeratX2 - (jumBeratX**2 / jumBerat)));
+  const sePintas = Math.sqrt(mse * (1 / jumBerat + jumBeratX**2 / (jumBerat**2 * jumBeratX2)));
+
+  bukuKerja.getRange('E8').setFormula(`=TINV(0.05,${bil - 2})`);
+  const nilaiStudentT = bukuKerja.getRange('E8').getValue();
+
+  return {
+    cerunBawah: cerun - nilaiStudentT * seCerun,
+    cerunAtas: cerun + nilaiStudentT * seCerun,
+    pintasBawah: pintas - nilaiStudentT * sePintas,
+    pintasAtas: pintas + nilaiStudentT * sePintas,
+  };
+}
+
+function bantuKiraWLS(x, y, berat) {
+  let jumBerat = 0;
+  let jumBeratX = 0;
+  let jumBeratY = 0;
+  let jumBeratXY = 0;
+  let jumBeratX2 = 0;
+
+  for (let i=0; i<x.length; i++) {
+    const b = berat[i];
+    jumBerat += b;
+    jumBeratX += b * x[i];
+    jumBeratY += b * y[i];
+    jumBeratXY += b * x[i] * y[i]
+    jumBeratX2 += b * x[i]**2;
+  }
+
+  const kecerunan = (jumBerat * jumBeratXY - jumBeratX * jumBeratY) / (jumBerat * jumBeratX2 - jumBeratX**2);
+  const pintasan = (jumBeratY - kecerunan * jumBeratX) / jumBerat;
+
+  return {kecerunan, pintasan};
+}
+
+function bantuKiraPurata(data) {
+  let purata = (data.reduce((a, b) => a + b, 0)) / data.length;
+  return purata;
+}
+
+function bantuKiraSDSampel(data) {
+  let p = bantuKiraPurata(data);
+  let v = (data.reduce((a, b) => a + (b - p)**2, 0)) / (data.length - 1);
+  let s = Math.sqrt(v);
+  return s;
+}
+
+
 /*====================
-6. Fungsi Bantuan Umum
+7. Fungsi Bantuan Umum
 ====================*/
 function paparPilih(x) {
   let kawasanTerpilih = {
