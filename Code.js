@@ -94,25 +94,15 @@ function kiraWLSRgs(kawasan) {
   let SEMbeta0 = nilaiStudentT * dataCoef[1][0];
   let SEMbeta1 = nilaiStudentT * dataCoef[1][1];
 
-  bukuKerja.getRange('E10').setValue(dataCoef[0][0] - SEMbeta0);
-  bukuKerja.getRange('F10').setValue(dataCoef[0][0]);
-  bukuKerja.getRange('G10').setValue(dataCoef[0][0] + SEMbeta0);
-  bukuKerja.getRange('E11').setValue(dataCoef[0][1] - SEMbeta1);
-  bukuKerja.getRange('F11').setValue(dataCoef[0][1]);
-  bukuKerja.getRange('G11').setValue(dataCoef[0][1] + SEMbeta1);
-  bukuKerja.getRange('E10').getDataRegion().setNumberFormat('0.0000')
+  let beta0 = pemformat().format(dataCoef[0][0]);
+  let beta0bawah = pemformat().format(dataCoef[0][0] - SEMbeta0);
+  let beta0atas = pemformat().format(dataCoef[0][0] + SEMbeta0);
 
-  bukuKerja.getRange('E13').setValue(dataCoef[2][0]).setNumberFormat('0.00%');
+  let beta1 = pemformat().format(dataCoef[0][1]);
+  let beta1bawah = pemformat().format(dataCoef[0][1] - SEMbeta1);
+  let beta1atas = pemformat().format(dataCoef[0][1] + SEMbeta1);
 
-  let beta0 = bukuKerja.getRange('F10').getDisplayValue();
-  let beta0bawah = bukuKerja.getRange('E10').getDisplayValue();
-  let beta0atas = bukuKerja.getRange('G10').getDisplayValue();
-
-  let beta1 = bukuKerja.getRange('F11').getDisplayValue();
-  let beta1bawah = bukuKerja.getRange('E11').getDisplayValue();
-  let beta1atas = bukuKerja.getRange('G11').getDisplayValue();
-
-  let rKuasa2 = `R2 = ${bukuKerja.getRange('E13').getDisplayValue()}`;
+  let rKuasa2 = `R2 = ${pemformat('percent', 2).format(dataCoef[2][0])}`;
 
   let persamaan = `Y = (${beta0}) + (${beta1})X`;
   let kecerunan = `Kecerunan = [${beta1bawah} , ${beta1atas}]`;
@@ -176,29 +166,11 @@ function wDemingR(kawasan) {
   const {r2, sse} = bantuKiraR2(purata_x, purata_y, pemberat, beta1, beta0);
   const selangKeyakinan = bantuKiraCI(purata_x, purata_y, pemberat, beta1, beta0, bilSampel, sse);
 
-  bukuKerja.getRange('E10').setValue(selangKeyakinan.cerunBawah);
-  bukuKerja.getRange('F10').setValue(beta1);
-  bukuKerja.getRange('G10').setValue(selangKeyakinan.cerunAtas);
-  bukuKerja.getRange('E11').setValue(selangKeyakinan.pintasBawah);
-  bukuKerja.getRange('F11').setValue(beta0);
-  bukuKerja.getRange('G11').setValue(selangKeyakinan.pintasAtas);
-  bukuKerja.getRange('E10').getDataRegion().setNumberFormat('0.0000')
+  let rKuasa2 = `R2 = ${pemformat('percent', 2).format(r2)}`;
 
-  bukuKerja.getRange('E13').setValue(r2).setNumberFormat('0.00%');
-
-  let pintas = bukuKerja.getRange('F11').getDisplayValue();
-  let beta0bawah = bukuKerja.getRange('E11').getDisplayValue();
-  let beta0atas = bukuKerja.getRange('G11').getDisplayValue();
-
-  let cerun = bukuKerja.getRange('F10').getDisplayValue();
-  let beta1bawah = bukuKerja.getRange('E10').getDisplayValue();
-  let beta1atas = bukuKerja.getRange('G10').getDisplayValue();
-
-  let rKuasa2 = `R2 = ${bukuKerja.getRange('E13').getDisplayValue()}`;
-
-  let persamaan = `Y = (${pintas}) + (${cerun})X`;
-  let kecerunan = `Kecerunan = [${beta1bawah} , ${beta1atas}]`;
-  let pintasan = `Pintasan = [${beta0bawah} , ${beta0atas}]`;
+  let persamaan = `Y = (${pemformat().format(beta0)}) + (${pemformat().format(beta1)})X`;
+  let kecerunan = `Kecerunan = [${pemformat().format(selangKeyakinan.cerunBawah)} , ${pemformat().format(selangKeyakinan.cerunAtas)}]`;
+  let pintasan = `Pintasan = [${pemformat().format(selangKeyakinan.pintasBawah)} , ${pemformat().format(selangKeyakinan.pintasAtas)}]`;
 
   return [persamaan, kecerunan, pintasan, rKuasa2];
 }
@@ -277,7 +249,7 @@ function bantuKiraPurata(data) {
 function bantuKiraSDSampel(data) {
   let p = bantuKiraPurata(data);
   let v = (data.reduce((a, b) => a + (b - p)**2, 0)) / (data.length - 1);
-  let s = Math.sqrt(v);
+  let s = v > 0? Math.sqrt(v) : 1e-6;
   return s;
 }
 
@@ -285,6 +257,16 @@ function bantuKiraSDSampel(data) {
 /*====================
 7. Fungsi Bantuan Umum
 ====================*/
+function pemformat(stail='decimal', bilTp=4) {
+  const pemf = new Intl.NumberFormat('en-US', {
+    style: stail,
+    minimumFractionDigits: bilTp,
+  });
+
+  return pemf;
+}
+
+
 function paparPilih(x) {
   let kawasanTerpilih = {
     'x': 'kawasanX',
